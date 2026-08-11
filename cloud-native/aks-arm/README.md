@@ -14,24 +14,11 @@ Deploys [Azure Kubernetes Service (AKS)](https://learn.microsoft.com/azure/aks/w
 
 ## Deploy via Azure CLI
 
-Azure Linux V3 Preview feature registration:
-
-```bash
-az feature register \
-    --namespace Microsoft.ContainerService \
-    --name AzureLinuxV3Preview
-```
-
-```bash
-az feature show \
-    --namespace Microsoft.ContainerService \
-    --name AzureLinuxV3Preview
-```
-
-```bash
-az provider register \
-    -n Microsoft.ContainerService
-```
+Azure Linux 3 no longer needs a preview feature registration. It is a first
+class `osSKU` value on the stable `2026-05-01` API version this template uses,
+and the template defaults to it. Verified on 2026-08-11: with
+`AzureLinuxV3Preview` reporting `NotRegistered`, a deployment of this template
+still came up on Azure Linux V3 node images.
 
 Create resource group:
 
