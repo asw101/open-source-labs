@@ -26,7 +26,21 @@ param linuxAdminUsername string
 @description('SSH RSA public key used to access the Linux virtual machines.')
 param sshRSAPublicKey string
 
-resource aks 'Microsoft.ContainerService/managedClusters@2024-02-01' = {
+@description('The node OS. Azure Linux 3 is the default for this lab.')
+@allowed([
+  'AzureLinux3'
+  'AzureLinux'
+  'Ubuntu'
+])
+param osSKU string = 'AzureLinux3'
+
+// The API version is the latest STABLE one, deliberately, not the quickstart's
+// 2024-02-01 and not a preview. The bump is forced rather than cosmetic: the
+// osSKU enum did not include AzureLinux3 until well after 2024-02-01. Check for
+// newer stable versions with
+//   az provider show --namespace Microsoft.ContainerService \
+//     --query "resourceTypes[?resourceType=='managedClusters'].apiVersions[]" -o tsv | grep -v preview
+resource aks 'Microsoft.ContainerService/managedClusters@2026-05-01' = {
   name: clusterName
   location: location
   identity: {
@@ -40,7 +54,7 @@ resource aks 'Microsoft.ContainerService/managedClusters@2024-02-01' = {
         mode: 'System'
         name: 'system1'
         osDiskSizeGB: osDiskSizeGB
-        osSKU: 'AzureLinux'
+        osSKU: osSKU
         osType: 'Linux'
         vmSize: agentVMSize
       }
@@ -49,7 +63,7 @@ resource aks 'Microsoft.ContainerService/managedClusters@2024-02-01' = {
         mode: 'User'
         name: 'user1'
         osDiskSizeGB: osDiskSizeGB
-        osSKU: 'AzureLinux'
+        osSKU: osSKU
         osType: 'Linux'
         vmSize: agentVMSize
       }

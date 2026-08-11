@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "17216881337711988468"
+      "templateHash": "17003780633445452721"
     }
   },
   "resources": [
@@ -28,7 +28,8 @@
                 "count": 1,
                 "mode": "System",
                 "name": "systempool",
-                "vmSize": "Standard_D2s_v5"
+                "vmSize": "Standard_D2s_v5",
+                "osSKU": "AzureLinux3"
               }
             ]
           },

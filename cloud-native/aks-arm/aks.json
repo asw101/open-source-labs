@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "6950203844022013049"
+      "templateHash": "10738095528175143336"
     }
   },
   "parameters": {
@@ -65,12 +65,24 @@
       "metadata": {
         "description": "SSH RSA public key used to access the Linux virtual machines."
       }
+    },
+    "osSKU": {
+      "type": "string",
+      "defaultValue": "AzureLinux3",
+      "allowedValues": [
+        "AzureLinux3",
+        "AzureLinux",
+        "Ubuntu"
+      ],
+      "metadata": {
+        "description": "The node OS. Azure Linux 3 is the default for this lab."
+      }
     }
   },
   "resources": [
     {
       "type": "Microsoft.ContainerService/managedClusters",
-      "apiVersion": "2024-02-01",
+      "apiVersion": "2026-05-01",
       "name": "[parameters('clusterName')]",
       "location": "[parameters('location')]",
       "identity": {
@@ -84,7 +96,7 @@
             "mode": "System",
             "name": "system1",
             "osDiskSizeGB": "[parameters('osDiskSizeGB')]",
-            "osSKU": "AzureLinux",
+            "osSKU": "[parameters('osSKU')]",
             "osType": "Linux",
             "vmSize": "[parameters('agentVMSize')]"
           },
@@ -93,7 +105,7 @@
             "mode": "User",
             "name": "user1",
             "osDiskSizeGB": "[parameters('osDiskSizeGB')]",
-            "osSKU": "AzureLinux",
+            "osSKU": "[parameters('osSKU')]",
             "osType": "Linux",
             "vmSize": "[parameters('agentVMSize')]"
           }
@@ -114,7 +126,7 @@
   "outputs": {
     "controlPlaneFQDN": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName')), '2024-02-01').fqdn]"
+      "value": "[reference(resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName')), '2026-05-01').fqdn]"
     }
   }
 }

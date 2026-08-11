@@ -14,6 +14,14 @@ param gpu2VmSize string = 'Standard_NC24ads_A100_v4'
 //   az deployment group create ... --parameters deployGpuPools=true
 param deployGpuPools bool = false
 
+@description('The node OS. This lab is about Azure Linux, so it defaults to Azure Linux 3.')
+@allowed([
+  'AzureLinux3'
+  'AzureLinux'
+  'Ubuntu'
+])
+param osSKU string = 'AzureLinux3'
+
 // No kubernetesVersion is set: AKS picks the current default for the region.
 // Pinning it here is what broke this template — '1.29' fell below the oldest
 // version canadacentral still offers, so the deployment failed outright rather
@@ -29,7 +37,7 @@ var systemPool = [
     vmSize: vmSize
     mode: 'System'
     osType: 'Linux'
-    osSKU: 'AzureLinux'
+    osSKU: osSKU
   }
 ]
 
@@ -40,7 +48,7 @@ var gpuPools = [
     vmSize: gpu1VmSize
     mode: 'User'
     osType: 'Linux'
-    osSKU: 'AzureLinux'
+    osSKU: osSKU
     nodeTaints: [
       'sku=gpu:NoSchedule'
     ]
@@ -54,7 +62,7 @@ var gpuPools = [
     vmSize: gpu2VmSize
     mode: 'User'
     osType: 'Linux'
-    osSKU: 'AzureLinux'
+    osSKU: osSKU
     nodeTaints: [
       'sku=gpu:NoSchedule'
     ]
@@ -69,7 +77,7 @@ resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-
   location: location
 }
 
-resource aks 'Microsoft.ContainerService/managedClusters@2024-02-01' = {
+resource aks 'Microsoft.ContainerService/managedClusters@2026-05-01' = {
   name: clusterName
   location: location
   identity: {

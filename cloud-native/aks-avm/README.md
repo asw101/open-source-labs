@@ -12,6 +12,11 @@ az deployment group create \
     --template-file cloud-native/aks-avm/aks.bicep
 ```
 
+One deliberate deviation from "only defaults": `osSKU: 'AzureLinux3'` is set
+explicitly. The module otherwise defaults to Ubuntu, and every other AKS lab
+here runs Azure Linux — a comparison lab that silently differed on the node OS
+would compare the wrong thing.
+
 ## First comparison finding
 
 The module's defaults are not region-neutral. Validated against `canadacentral`
