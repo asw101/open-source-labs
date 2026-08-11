@@ -192,12 +192,12 @@ az deployment group create \
         cloudInit='tailscale-private' \
         env="$ENV" \
         vmSize="$VM_SIZE" \
-        osImage='Ubuntu 20.04-LTS (arm64)'
+        osImage='Ubuntu 24.04-LTS (arm64)'
 ```
 
 The `vmSize` parameter in the [vm.bicep](./vm.bicep) template currently accepts either `Standard_D2ps_v5` or `Standard_D2ps_v5`.
 
-When using any of these SKUs, you must make sure the `osImage` is set to `Ubuntu 20.04-LTS (arm64)` as this value will select the proper OS image that can be used with arm64 architecture.
+When using any of these SKUs, you must make sure the `osImage` is set to `Ubuntu 24.04-LTS (arm64)` as this value will select the proper OS image that can be used with arm64 architecture.
 
 ## Delete Resources
 
