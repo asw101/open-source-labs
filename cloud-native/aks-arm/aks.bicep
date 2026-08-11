@@ -1,47 +1,70 @@
+@description('The name of the Managed Cluster resource.')
+param clusterName string = 'aks-arm'
+
+@description('The location of the Managed Cluster resource.')
 param location string = resourceGroup().location
 
-var managedIdentityName = '${resourceGroup().name}-identity'
+@description('Optional DNS prefix to use with hosted Kubernetes API server FQDN.')
+param dnsPrefix string
 
-resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' = {
-  name: managedIdentityName
+@description('Disk size (in GB) to provision for each of the agent pool nodes. Specifying 0 applies the default disk size for the VM size.')
+@minValue(0)
+@maxValue(1023)
+param osDiskSizeGB int = 0
+
+@description('The number of nodes in each agent pool.')
+@minValue(1)
+@maxValue(50)
+param agentCount int = 1
+
+@description('The size of the Azure Cobalt 100 Arm-based virtual machines.')
+param agentVMSize string = 'Standard_D2pds_v6'
+
+@description('User name for the Linux virtual machines.')
+param linuxAdminUsername string
+
+@description('SSH RSA public key used to access the Linux virtual machines.')
+param sshRSAPublicKey string
+
+resource aks 'Microsoft.ContainerService/managedClusters@2024-02-01' = {
+  name: clusterName
   location: location
-}
-
-module managedCluster 'br/public:avm/res/container-service/managed-cluster:0.6.2' = {
-  name: 'managedClusterDeployment'
-  params: {
-    // Required parameters
-    name: 'aks-1'
-    kubernetesVersion: '1.31.2'
-    primaryAgentPoolProfiles: [
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties: {
+    dnsPrefix: dnsPrefix
+    agentPoolProfiles: [
       {
-        count: 1
+        count: agentCount
         mode: 'System'
         name: 'system1'
+        osDiskSizeGB: osDiskSizeGB
         osSKU: 'AzureLinux'
-        vmSize: 'Standard_D2pds_v6'
-        orchestratorVersion: '1.31.2'
+        osType: 'Linux'
+        vmSize: agentVMSize
       }
       {
-        count: 1
+        count: agentCount
         mode: 'User'
         name: 'user1'
+        osDiskSizeGB: osDiskSizeGB
         osSKU: 'AzureLinux'
-        vmSize: 'Standard_D2pds_v6'
-        orchestratorVersion: '1.31.2'
+        osType: 'Linux'
+        vmSize: agentVMSize
       }
     ]
-    // Non-required parameters
-    location: location
-    aadProfile: {
-      aadProfileEnableAzureRBAC: true
-      aadProfileManaged: true
-    }
-    disableLocalAccounts: true
-    managedIdentities: {
-      userAssignedResourceIds: [
-        managedIdentity.id
-      ]
+    linuxProfile: {
+      adminUsername: linuxAdminUsername
+      ssh: {
+        publicKeys: [
+          {
+            keyData: sshRSAPublicKey
+          }
+        ]
+      }
     }
   }
 }
+
+output controlPlaneFQDN string = aks.properties.fqdn

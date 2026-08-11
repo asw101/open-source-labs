@@ -1,6 +1,6 @@
-# Deploy Azure Kubernetes Service (AKS) with Bicep and Azure Verified Modules (AVM)
+# Deploy Azure Kubernetes Service (AKS) with Bicep on Azure Cobalt Arm-based VMs
 
-Deploys [Azure Kubernetes Service (AKS)](https://learn.microsoft.com/azure/aks/what-is-aks) running [Azure Linux](https://learn.microsoft.com/azure/aks/use-azure-linux) and [Azure Cobalt 100 Arm-based VMs](https://learn.microsoft.com/azure/virtual-machines/sizes/cobalt-overview).
+Deploys [Azure Kubernetes Service (AKS)](https://learn.microsoft.com/azure/aks/what-is-aks) as a raw Bicep resource running [Azure Linux](https://learn.microsoft.com/azure/aks/use-azure-linux) on [Azure Cobalt 100 Arm-based VMs](https://learn.microsoft.com/azure/virtual-machines/sizes/cobalt-overview).
 
 ## Deploy via Azure Portal
 
