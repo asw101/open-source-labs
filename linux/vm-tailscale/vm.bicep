@@ -127,7 +127,8 @@ write_files:
     key="$1"
     if [ -n "$key" ] && [ "$key" != "null" ]; then
         tailscale up --ssh --authkey "$key"
-        echo "tailscale: joined tailnet with auth key" >/dev/console
+        # Console writes are best-effort: never fail the boot over logging.
+        echo "tailscale: joined tailnet with auth key" >/dev/console 2>/dev/null || true
         exit 0
     fi
 
@@ -145,7 +146,8 @@ write_files:
     done
 
     if [ -z "$url" ]; then
-        echo "tailscale: FAILED to obtain a login URL" >/dev/console
+        echo "tailscale: FAILED to obtain a login URL" >/dev/console 2>/dev/null || true
+        echo "tailscale: FAILED to obtain a login URL" >&2
         exit 1
     fi
 
@@ -153,8 +155,9 @@ write_files:
     chmod 0644 /var/lib/tailscale-authurl.txt
 
     # Publish to the serial console so it reaches Azure boot diagnostics.
+    # Best-effort: the file above is the authoritative copy.
     printf '\n===== TAILSCALE LOGIN URL =====\n%s\n===============================\n\n' \
-        "$url" >/dev/console
+        "$url" >/dev/console 2>/dev/null || true
 
 runcmd:
 - cd /home/azureuser/
@@ -331,3 +334,9 @@ resource vm 'Microsoft.Compute/virtualMachines@2024-03-01' = {
 output adminUsername string = adminUsername
 output hostname string = publicIP.properties.dnsSettings.fqdn
 output sshCommand string = 'ssh ${adminUsername}@${publicIP.properties.dnsSettings.fqdn}'
+
+@description('Fetch the Tailscale login URL when deployed without an auth key.')
+output authUrlCommand string = 'az vm run-command invoke --resource-group ${resourceGroup().name} --name ${vmName} --command-id RunShellScript --scripts "tailscale-authurl" --query "value[0].message" -o tsv'
+
+@description('Same URL via the serial console, no in-VM agent required.')
+output authUrlBootLogCommand string = 'az vm boot-diagnostics get-boot-log --resource-group ${resourceGroup().name} --name ${vmName} -o tsv | grep -o "https://login.tailscale.com/a/[a-z0-9]*" | tail -1'
