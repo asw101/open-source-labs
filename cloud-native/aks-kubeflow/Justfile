@@ -191,49 +191,7 @@ group-delete:
 
 [private]
 _password-and-hash:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    if ! python3 -c 'import bcrypt' 2>/dev/null; then
-        printf 'Python package bcrypt is required (python3 -m pip install bcrypt).\n' >&2
-        exit 1
-    fi
-
-    random_index() {
-        local limit="$1" value ceiling
-        ceiling=$((256 - (256 % limit)))
-        while true; do
-            value=$((16#$(openssl rand -hex 1)))
-            if (( value < ceiling )); then
-                REPLY=$((value % limit))
-                return
-            fi
-        done
-    }
-
-    take_random() {
-        local pool="$1" count="$2" result="" index
-        while (( ${#result} < count )); do
-            random_index "${#pool}"
-            index="$REPLY"
-            result+="${pool:index:1}"
-            pool="${pool:0:index}${pool:index+1}"
-        done
-        REPLY="$result"
-    }
-
-    take_random 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' 12
-    letters="$REPLY"
-    take_random '0123456789' 10
-    digits="$REPLY"
-    take_random '~!@#$%^&*()_+`-={}|[]\:"<>?,./' 10
-    symbols="$REPLY"
-    take_random "$letters$digits$symbols" 32
-    password="$REPLY"
-
-    hash="$(python3 -c \
-        'import bcrypt, sys; print(bcrypt.hashpw(sys.argv[1].encode(), bcrypt.gensalt(rounds=12)).decode())' \
-        "$password")"
-    printf 'Password: %s\nHash: %s\n' "$password" "$hash"
+    @cd {{justfile_directory()}}/tools/password && go run .
 
 # Generate a 32-character password and its cost-12 bcrypt hash.
 password:
