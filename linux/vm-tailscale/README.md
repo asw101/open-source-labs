@@ -4,9 +4,11 @@
 
 Deploy an Azure Linux VM with [Tailscale SSH](https://tailscale.com/kb/1193/tailscale-ssh/) — no public SSH ports, no SSH keys to manage. Connect securely over your [Tailscale tailnet](https://tailscale.com/kb/1136/tailnet/).
 
-## Prerequisites
+## Requirements
 
-- [Azure CLI](https://docs.microsoft.com/cli/azure/install-azure-cli)
+- An **Azure Subscription** (e.g. [Free](https://aka.ms/azure-free-account) or [Student](https://aka.ms/azure-student-account) account)
+- The [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli)
+- A Bash shell (macOS, Linux, [Windows Subsystem for Linux (WSL)](https://learn.microsoft.com/windows/wsl/about), or [Azure Cloud Shell](https://learn.microsoft.com/azure/cloud-shell/quickstart))
 - A [Tailscale](https://tailscale.com/) account
 - A Tailscale [Auth key](https://login.tailscale.com/admin/settings/keys) (one-off recommended)
 

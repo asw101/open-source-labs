@@ -2,11 +2,11 @@
 
 ## Azure Container Apps
 
-- [Lab: Serverless Containers with Go, Azure Container Apps, and GitHub Container Registry](containerapps-github-go/)
-- [Lab: Cloud Native Python with Azure Container Apps, Azure Container Registry, and FastAPI on PyPy](containerapps-python-fastapi/)
-- [Lab: Serverless Containers with Python, Azure Container Apps, and GitHub Container Registry](containerapps-github-python/)
-- [Lab: Explore Azure Container Apps, Bicep, and PostgreSQL](containerapps-bicep/)
-- [Lab: Explore Azure Container Apps, Terraform, KEDA, and Grafana](containerapps-terraform/)
+- Lab: Serverless Containers with Go, Azure Container Apps, and GitHub Container Registry
+- Lab: Cloud Native Python with Azure Container Apps, Azure Container Registry, and FastAPI on PyPy
+- Lab: Serverless Containers with Python, Azure Container Apps, and GitHub Container Registry
+- Lab: Explore Azure Container Apps, Bicep, and PostgreSQL
+- Lab: Explore Azure Container Apps, Terraform, KEDA, and Grafana
 - [Quickstart: Deploy your first container app (docs.microsoft.com)](https://docs.microsoft.com/azure/container-apps/get-started)
 - [Quickstart: Deploy an existing container image with the Azure CLI (docs.microsoft.com)](https://docs.microsoft.com/azure/container-apps/get-started-existing-container-image)
 - [Tutorial: Deploy a background processing application with Azure Container Apps Preview (docs.microsoft.com)](https://docs.microsoft.com/en-ca/azure/container-apps/background-processing?tabs=bash)

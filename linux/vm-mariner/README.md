@@ -6,8 +6,9 @@ NOTE: This lab is for experimentation with the open source [CBL-Mariner](https:/
 
 ## Requirements
 
-- [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli)
-- Bash
+- An **Azure Subscription** (e.g. [Free](https://aka.ms/azure-free-account) or [Student](https://aka.ms/azure-student-account) account)
+- The [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli)
+- A Bash shell (macOS, Linux, [Windows Subsystem for Linux (WSL)](https://learn.microsoft.com/windows/wsl/about), or [Azure Cloud Shell](https://learn.microsoft.com/azure/cloud-shell/quickstart))
 - [Just](https://just.systems/) (`brew install just`, or see the [install guide](https://just.systems/man/en/packages.html))
 - [curl](https://curl.se/)
 

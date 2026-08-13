@@ -6,8 +6,10 @@ This lab is the Advanced scenario for deployment of Kubeflow using [just](https:
 
 ## Requirements
 
-- [just](https://just.systems/man/en/packages.html)
-- [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli)
+- An **Azure Subscription** (e.g. [Free](https://aka.ms/azure-free-account) or [Student](https://aka.ms/azure-student-account) account)
+- The [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli)
+- A Bash shell (macOS, Linux, [Windows Subsystem for Linux (WSL)](https://learn.microsoft.com/windows/wsl/about), or [Azure Cloud Shell](https://learn.microsoft.com/azure/cloud-shell/quickstart))
+- [Just](https://just.systems/) (`brew install just`, or see the [install guide](https://just.systems/man/en/packages.html))
 - [curl](https://curl.se/)
 - [OpenSSL](https://www.openssl.org/)
 - [Python 3](https://www.python.org/) with [bcrypt](https://pypi.org/project/bcrypt/) (`python3 -m pip install bcrypt`)
