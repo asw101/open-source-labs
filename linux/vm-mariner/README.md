@@ -2,7 +2,7 @@
 
 NOTE: This lab is for experimentation with the open source [CBL-Mariner](https://github.com/microsoft/CBL-Mariner) project, and **not a currently supported offering** for Virtual Machines on Azure. For the fully-supported Azure Linux offering for AKS, see [Introducing the Azure Linux container host for AKS](https://aka.ms/azure-linux) and [Quickstart: Deploy an Azure Linux Container Host for AKS cluster by using the Azure CLI](https://learn.microsoft.com/azure/azure-linux/quickstart-azure-cli).
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure-Samples%2Fazure-opensource-labs%2Fmain%2Flinux%2Fvm-mariner%2Fvm.json)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure-Samples%2Fopen-source-labs%2Fmain%2Flinux%2Fvm-mariner%2Fvm.json)
 
 ## Requirements
 
