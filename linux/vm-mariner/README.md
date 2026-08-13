@@ -4,20 +4,44 @@ NOTE: This lab is for experimentation with the open source [CBL-Mariner](https:/
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure-Samples%2Fazure-opensource-labs%2Fmain%2Flinux%2Fvm-mariner%2Fvm.json)
 
+## Requirements
+
+- [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli)
+- Bash
+- [Just](https://just.systems/) (`brew install just`, or see the [install guide](https://just.systems/man/en/packages.html))
+- [curl](https://curl.se/)
+
+## Commands
+
 ```
-$ mage
-Targets:
-  dockerTailcale     installs Docker and runs Tailscale on the VM
-  group:create       creates the Azure Resource Group
-  group:delete       deletes the Azure Resource Group
-  group:empty        empties the Azure Resource Group
-  managedIdentity    creates a managed identity for the Azure VM
-  pg                 creates the Azure Database for Postgres via the CLI (az postgres flexible-server create)
-  pgAdmin            adds the Managed Identity as Postgres server admin
-  runScript          runs an optional command (VM_COMMAND) followed by script (VM_SCRIPT) using RunCommand on the Azure VM
-  ssh                gets the FQDN of the VM and outputs an ssh command
-  sshKey             creates an ssh key for Azure VMs
-  subscription       switches between two Azure subscriptions
-  vm                 creates the Azure VM via the CLI (az vm create)
-  vmBicep            deploys vm.bicep to the Azure resource group with parameters
+$ just
+Available recipes:
+    default
+    docker-tailscale # Install Docker and optionally run Tailscale on the VM.
+    group-create     # Create the Azure resource group.
+    group-delete     # Delete the Azure resource group and everything in it.
+    group-empty      # Empty the resource group, leaving the group itself in place.
+    managed-identity # Create and assign a managed identity to the VM.
+    pg               # Create an Azure Database for PostgreSQL flexible server.
+    pg-admin         # Add the managed identity as PostgreSQL server administrator.
+    run-script       # Run VM_COMMAND, if set, followed by VM_SCRIPT on the VM.
+    ssh              # Print the SSH command for the VM.
+    ssh-key          # Create an SSH key resource for Azure VMs.
+    subscription     # Switch between the SUB1 and SUB2 Azure subscriptions.
+    vm               # Create the Azure VM directly with the Azure CLI.
+    vm-bicep         # Deploy vm.bicep at resource group scope.
+```
+
+Create the resource group and deploy the Bicep template:
+
+```
+just group-create vm-bicep
+```
+
+Empty the group while preserving it and its scoped role assignments, or delete
+the group and everything in it:
+
+```
+just group-empty
+just group-delete
 ```
