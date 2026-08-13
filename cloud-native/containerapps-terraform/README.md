@@ -14,7 +14,7 @@ To import dashboards, navigate to your Azure Managed Grafana site, click on the 
 
 - An **Azure Subscription** (e.g. [Free](https://aka.ms/azure-free-account) or [Student](https://aka.ms/azure-student-account) account)
 - The [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli)
-- A Bash shell (macOS, Linux, [Windows Subsystem for Linux (WSL)](https://learn.microsoft.com/windows/wsl/about), or [Azure Cloud Shell](https://learn.microsoft.com/azure/cloud-shell/quickstart))
+- A Bash shell (macOS, Linux, [Windows Subsystem for Linux (WSL)](https://learn.microsoft.com/windows/wsl/about), [Azure Cloud Shell](https://learn.microsoft.com/azure/cloud-shell/quickstart), or [GitHub Codespaces](https://github.com/features/codespaces))
 - The [Terraform CLI](https://www.terraform.io/downloads)
 - The [k6 CLI](https://k6.io/docs/getting-started/installation/)
 

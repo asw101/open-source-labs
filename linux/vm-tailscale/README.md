@@ -8,7 +8,7 @@ Deploy an Azure Linux VM with [Tailscale SSH](https://tailscale.com/kb/1193/tail
 
 - An **Azure Subscription** (e.g. [Free](https://aka.ms/azure-free-account) or [Student](https://aka.ms/azure-student-account) account)
 - The [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli)
-- A Bash shell (macOS, Linux, [Windows Subsystem for Linux (WSL)](https://learn.microsoft.com/windows/wsl/about), or [Azure Cloud Shell](https://learn.microsoft.com/azure/cloud-shell/quickstart))
+- A Bash shell (macOS, Linux, [Windows Subsystem for Linux (WSL)](https://learn.microsoft.com/windows/wsl/about), [Azure Cloud Shell](https://learn.microsoft.com/azure/cloud-shell/quickstart), or [GitHub Codespaces](https://github.com/features/codespaces))
 - A [Tailscale](https://tailscale.com/) account
 - A Tailscale [Auth key](https://login.tailscale.com/admin/settings/keys) (one-off recommended)
 
