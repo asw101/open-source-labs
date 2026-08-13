@@ -1,7 +1,5 @@
 # Kubeflow on Azure Kubernetes Service (AKS)
 
-[Walkthrough (vimeo.com)](https://vimeo.com/asw101/aks-kubeflow)
-
 This lab is the Advanced scenario for deployment of Kubeflow using [just](https://just.systems/) and the included [Justfile](Justfile) for automation of deployment steps. See [BASIC-CLI.md](BASIC-CLI.md) for the Basic scenario, which provides manual steps without any further automation, configuration of ingress, TLS, and a stronger default password.
 
 ## Requirements
