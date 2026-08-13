@@ -26,12 +26,6 @@ Go (golang), Python, PyCon, GopherCon, OSCON & more.
 
 - [Azure-Samples/azure-python-labs](https://github.com/Azure-Samples/azure-python-labs)
 
-## Azure Container Apps
-
-- [Quickstart: Deploy your first container app (learn.microsoft.com)](https://learn.microsoft.com/azure/container-apps/get-started)
-- [Quickstart: Deploy an existing container image with the Azure CLI (learn.microsoft.com)](https://learn.microsoft.com/azure/container-apps/get-started-existing-container-image)
-- [Tutorial: Deploy a background processing application with Azure Container Apps (learn.microsoft.com)](https://learn.microsoft.com/azure/container-apps/background-processing?tabs=bash)
-
 ## OSCON 2019
 
 Our Open Source Labs were originally developed for [OSCON 2019](https://en.wikipedia.org/wiki/O%27Reilly_Open_Source_Convention). These are similar to labs such GopherCon (Azure Go Labs), PyCon (Azure Python Labs), KubeCon (Azure Container Labs), and other in-person and virtual events, many of which will continue to be updated in this repository.
