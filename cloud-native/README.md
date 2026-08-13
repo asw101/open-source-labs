@@ -6,7 +6,6 @@
 - [Lab: Azure Kubernetes Service with ARM64 node pools using raw Bicep](aks-arm/)
 - [Lab: Minimal Azure Kubernetes Service deployment using Azure Verified Modules](aks-avm/)
 - [Lab: Azure Kubernetes Service with ARM64 node pools and Terraform](aks-arm64-terraform/)
-- [Run scalable and resilient Redis with Kubernetes and Azure Kubernetes Service (techcommunity.microsoft.com)](https://techcommunity.microsoft.com/t5/apps-on-azure-blog/run-scalable-and-resilient-redis-with-kubernetes-and-azure/ba-p/3247956) 
 
 ## Kubernetes Event-driven Autoscaling (KEDA) & KEDA HTTP Add-on
 
