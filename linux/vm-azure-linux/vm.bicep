@@ -1,12 +1,12 @@
 @description('The name of the Virtual Machine.')
 param vmName string = 'vm1'
 
-@description('The Azure Linux 3 image architecture.')
+@description('The Azure Linux 4 image architecture.')
 @allowed([
-  'Azure Linux 3'
-  'Azure Linux 3 (arm64)'
+  'Azure Linux 4'
+  'Azure Linux 4 (arm64)'
 ])
-param osImage string = 'Azure Linux 3'
+param osImage string = 'Azure Linux 4'
 
 @description('The Virtual Machine size for the x64 image. The Arm64 image automatically uses Standard_D2ps_v6.')
 @allowed([
@@ -28,20 +28,20 @@ param adminUsername string = 'azureuser'
 param sshKey string
 
 var imageReferences = {
-  'Azure Linux 3': {
-    publisher: 'MicrosoftCBLMariner'
-    offer: 'azure-linux-3'
-    sku: 'azure-linux-3-gen2'
+  'Azure Linux 4': {
+    publisher: 'microsoftazurelinux'
+    offer: 'azurelinux-4'
+    sku: '4'
     version: 'latest'
   }
-  'Azure Linux 3 (arm64)': {
-    publisher: 'MicrosoftCBLMariner'
-    offer: 'azure-linux-3'
-    sku: 'azure-linux-3-arm64'
+  'Azure Linux 4 (arm64)': {
+    publisher: 'microsoftazurelinux'
+    offer: 'azurelinux-4'
+    sku: '4-arm64'
     version: 'latest'
   }
 }
-var resolvedVmSize = osImage == 'Azure Linux 3 (arm64)' ? 'Standard_D2ps_v6' : vmSize
+var resolvedVmSize = osImage == 'Azure Linux 4 (arm64)' ? 'Standard_D2ps_v6' : vmSize
 var publicIPAddressName = '${vmName}-ip'
 var networkInterfaceName = '${vmName}-nic'
 var virtualNetworkName = '${vmName}-vnet'

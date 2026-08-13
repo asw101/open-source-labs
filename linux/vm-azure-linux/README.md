@@ -1,8 +1,8 @@
-# Azure Linux 3 on an Azure Virtual Machine
+# Azure Linux 4 on an Azure Virtual Machine
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure-Samples%2Fopen-source-labs%2Fmain%2Flinux%2Fvm-azure-linux%2Fvm.json)
 
-Deploy a vanilla Azure Linux 3 virtual machine with Bicep. The template follows
+Deploy a vanilla Azure Linux 4 virtual machine with Bicep. The template follows
 the [Microsoft Learn Linux VM Bicep quickstart](https://learn.microsoft.com/azure/virtual-machines/linux/quick-create-bicep)
 and restricts SSH access to the caller's public IP address by default.
 
@@ -38,8 +38,8 @@ assignment scoped to it.
 
 | `OS_IMAGE` | Publisher | Offer | SKU | Architecture | VM size |
 | --- | --- | --- | --- | --- | --- |
-| `Azure Linux 3` (default) | MicrosoftCBLMariner | azure-linux-3 | azure-linux-3-gen2 | x64 | Standard_D2s_v6 |
-| `Azure Linux 3 (arm64)` | MicrosoftCBLMariner | azure-linux-3 | azure-linux-3-arm64 | Arm64 | Standard_D2ps_v6 |
+| `Azure Linux 4` (default) | MicrosoftCBLMariner | azure-linux-3 | azure-linux-3-gen2 | x64 | Standard_D2s_v6 |
+| `Azure Linux 4 (arm64)` | MicrosoftCBLMariner | azure-linux-3 | azure-linux-3-arm64 | Arm64 | Standard_D2ps_v6 |
 
 Selecting the Arm64 image automatically uses the Arm64-capable
 `Standard_D2ps_v6` size. The x64 image defaults to `Standard_D2s_v6`.
@@ -53,7 +53,7 @@ export SSH_KEY=~/.ssh/id_ed25519.pub
 just group-create deploy-vm
 
 # Deploy the Arm64 VM instead.
-OS_IMAGE='Azure Linux 3 (arm64)' just deploy-vm
+OS_IMAGE='Azure Linux 4 (arm64)' just deploy-vm
 
 # Print the SSH command after deployment.
 just ssh-command

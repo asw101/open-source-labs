@@ -21,12 +21,16 @@ Go (golang), Python, PyCon, GopherCon, OSCON & more.
 ### Azure Container Apps
 
 - [Lab: Cloud Native Python with Azure Container Apps, Azure Container Registry, and FastAPI on PyPy](../cloud-native/containerapps-python-fastapi/)
-  - [Walkthrough (vimeo.com)](https://vimeo.com/695948817/572d6bbbcd)
 
 ### Azure Python Labs (PyCon 2022, 2021, ...)
 
 - [Azure-Samples/azure-python-labs](https://github.com/Azure-Samples/azure-python-labs)
 
+## Azure Container Apps
+
+- [Quickstart: Deploy your first container app (learn.microsoft.com)](https://learn.microsoft.com/azure/container-apps/get-started)
+- [Quickstart: Deploy an existing container image with the Azure CLI (learn.microsoft.com)](https://learn.microsoft.com/azure/container-apps/get-started-existing-container-image)
+- [Tutorial: Deploy a background processing application with Azure Container Apps (learn.microsoft.com)](https://learn.microsoft.com/azure/container-apps/background-processing?tabs=bash)
 
 ## OSCON 2019
 

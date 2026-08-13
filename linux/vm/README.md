@@ -32,8 +32,6 @@ This template is used as the foundation for other templates such as `tailscale` 
 
 ### `tailscale`
 
-[Walkthrough (vimeo.com)](https://vimeo.com/735970928/abef23554e)
-
 This package uses the `write_files` and `run_cmd` modules to write the `env` parameter (`{"tskey":"..."}`) to `/home/azureuser/env.json` function), and our setup script to `/home/azureuser/tailscale.sh`. The `env` variable is embedded in the template using Bicep's [format](https://docs.microsoft.com/azure/azure-resource-manager/bicep/bicep-functions-string#format) function. The `tskey` value is extracted using `jq` and the script completes by echoing the current date to `/home/azureuser/hello.txt`. See variable `cloudInitTailscale` in [vm.bicep](vm.bicep).
 
 You must generate a Tailscale [Auth key](https://tailscale.com/kb/1085/auth-keys/) via <https://login.tailscale.com/admin/settings/keys> prior to running this script. We recommend using a **one-off** key for this purpose, especially if you are not using [device authorization](https://tailscale.com/kb/1099/device-authorization/).

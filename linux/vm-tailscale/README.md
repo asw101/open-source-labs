@@ -119,7 +119,7 @@ ssh azureuser@<tailscale-ip>
 |-----------|---------|-------------|
 | `vmName` | `vm1` | VM name (also the Tailscale hostname) |
 | `vmSize` | `Standard_B2s_v2` | VM size (see VM Sizes below) |
-| `osImage` | `Ubuntu 24.04-LTS` | OS image (`Ubuntu 24.04-LTS (arm64)` for Arm) |
+| `osImage` | `Ubuntu 26.04-LTS` | OS image (`Ubuntu 26.04-LTS (arm64)` for Arm) |
 | `osDiskSize` | `64` | OS disk size in GB |
 | `cloudInit` | `none` | `tailscale` or `none` |
 | `env` | `{}` | JSON object with `tskey` for Tailscale auth key; omit for interactive login |
@@ -153,7 +153,7 @@ az deployment group create \
         cloudInit='tailscale' \
         env='{"tskey":"<YOUR_TAILSCALE_AUTH_KEY>"}' \
         vmSize='Standard_D2ps_v5' \
-        osImage='Ubuntu 24.04-LTS (arm64)'
+        osImage='Ubuntu 26.04-LTS (arm64)'
 ```
 
 ## Cleanup

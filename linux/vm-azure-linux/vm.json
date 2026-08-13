@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "850626824980295719"
+      "templateHash": "586321303492606166"
     }
   },
   "parameters": {
@@ -18,13 +18,13 @@
     },
     "osImage": {
       "type": "string",
-      "defaultValue": "Azure Linux 3",
+      "defaultValue": "Azure Linux 4",
       "allowedValues": [
-        "Azure Linux 3",
-        "Azure Linux 3 (arm64)"
+        "Azure Linux 4",
+        "Azure Linux 4 (arm64)"
       ],
       "metadata": {
-        "description": "The Azure Linux 3 image architecture."
+        "description": "The Azure Linux 4 image architecture."
       }
     },
     "vmSize": {
@@ -67,20 +67,20 @@
   },
   "variables": {
     "imageReferences": {
-      "Azure Linux 3": {
-        "publisher": "MicrosoftCBLMariner",
-        "offer": "azure-linux-3",
-        "sku": "azure-linux-3-gen2",
+      "Azure Linux 4": {
+        "publisher": "microsoftazurelinux",
+        "offer": "azurelinux-4",
+        "sku": "4",
         "version": "latest"
       },
-      "Azure Linux 3 (arm64)": {
-        "publisher": "MicrosoftCBLMariner",
-        "offer": "azure-linux-3",
-        "sku": "azure-linux-3-arm64",
+      "Azure Linux 4 (arm64)": {
+        "publisher": "microsoftazurelinux",
+        "offer": "azurelinux-4",
+        "sku": "4-arm64",
         "version": "latest"
       }
     },
-    "resolvedVmSize": "[if(equals(parameters('osImage'), 'Azure Linux 3 (arm64)'), 'Standard_D2ps_v6', parameters('vmSize'))]",
+    "resolvedVmSize": "[if(equals(parameters('osImage'), 'Azure Linux 4 (arm64)'), 'Standard_D2ps_v6', parameters('vmSize'))]",
     "publicIPAddressName": "[format('{0}-ip', parameters('vmName'))]",
     "networkInterfaceName": "[format('{0}-nic', parameters('vmName'))]",
     "virtualNetworkName": "[format('{0}-vnet', parameters('vmName'))]",

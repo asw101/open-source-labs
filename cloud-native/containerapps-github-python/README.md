@@ -13,8 +13,6 @@ Azure Container Apps enables you to run microservices and containerized applicat
 
 ## 1. Build and Containerize asw101/python-fastapi-pypy
 
-[Walkthrough 1/2 (vimeo.com)](https://vimeo.com/696758621/eb0fc146b4)
-
 1. Visit <https://github.com/asw101/python-fastapi-pypy>
 1. Click "Use this template".
 1. Name your repo "serverless-python".
@@ -40,8 +38,6 @@ az provider register --namespace Microsoft.OperationalInsights --wait
 ```
 
 ## 3. Set Environment Variables
-
-[Walkthrough 2/2 (vimeo.com)](https://vimeo.com/697821473/3f706c1aca)
 
 ```bash
 RESOURCE_GROUP="my-container-apps"

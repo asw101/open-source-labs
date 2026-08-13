@@ -72,11 +72,6 @@ Run the below command to send some load to your application.
 k6 run --vus 200 --duration 10s k6_scripts.js
 ```
 
-Once you have sent some traffic to the service, you can watch these videos for more details on the deployment.
-
-- [http-scaling](https://vimeo.com/746678347)
-- [event-driven-scaling](https://vimeo.com/746678266)
-
 If you are feeling adventurous, try implementing another container app with one of these [KEDA scalers](https://keda.sh/docs/scalers/) 🚀
 
 ## Clean up resources

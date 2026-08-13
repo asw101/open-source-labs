@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "16427987673882920591"
+      "templateHash": "6132653125388225264"
     }
   },
   "parameters": {
@@ -64,11 +64,11 @@
     },
     "osImage": {
       "type": "string",
-      "defaultValue": "Ubuntu 24.04-LTS",
+      "defaultValue": "Ubuntu 26.04-LTS",
       "allowedValues": [
-        "Ubuntu 24.04-LTS",
-        "Ubuntu 24.04-LTS (arm64)",
-        "Ubuntu 22.04-LTS"
+        "Ubuntu 26.04-LTS",
+        "Ubuntu 26.04-LTS (arm64)",
+        "Ubuntu 24.04-LTS"
       ],
       "metadata": {
         "description": "The OS image for the VM."
@@ -157,21 +157,21 @@
       "url": "[base64(variables('cloudInitUrl'))]"
     },
     "kvImageReference": {
+      "Ubuntu 26.04-LTS": {
+        "publisher": "Canonical",
+        "offer": "ubuntu-26_04-lts",
+        "sku": "server",
+        "version": "latest"
+      },
       "Ubuntu 24.04-LTS": {
         "publisher": "Canonical",
         "offer": "ubuntu-24_04-lts",
         "sku": "server",
         "version": "latest"
       },
-      "Ubuntu 22.04-LTS": {
+      "Ubuntu 26.04-LTS (arm64)": {
         "publisher": "Canonical",
-        "offer": "0001-com-ubuntu-server-jammy",
-        "sku": "22_04-lts-gen2",
-        "version": "latest"
-      },
-      "Ubuntu 24.04-LTS (arm64)": {
-        "publisher": "Canonical",
-        "offer": "ubuntu-24_04-lts",
+        "offer": "ubuntu-26_04-lts",
         "sku": "server-arm64",
         "version": "latest"
       }

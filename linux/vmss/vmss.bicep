@@ -28,12 +28,12 @@ param osDiskSize int = 256
 
 @description('The OS image for the VM.')
 @allowed([
+  'Ubuntu 26.04-LTS'
+  'Ubuntu 26.04-LTS (arm64)'
   'Ubuntu 24.04-LTS'
-  'Ubuntu 24.04-LTS (arm64)'
-  'Ubuntu 22.04-LTS'
-  'Azure Linux 3'
+  'Azure Linux 4'
 ])
-param osImage string = 'Ubuntu 24.04-LTS'
+param osImage string = 'Ubuntu 26.04-LTS'
 
 @description('Location for all resources.')
 param location string = resourceGroup().location
@@ -136,33 +136,33 @@ var kvCustomData = {
 }
 
 var kvImageReference = {
+  'Ubuntu 26.04-LTS': {
+    publisher: 'Canonical'
+    offer: 'ubuntu-26_04-lts'
+    sku: 'server'
+    version: 'latest'
+  }
+  'Ubuntu 26.04-LTS (arm64)': {
+    publisher: 'Canonical'
+    offer: 'ubuntu-26_04-lts'
+    sku: 'server-arm64'
+    version: 'latest'
+  }
   'Ubuntu 24.04-LTS': {
     publisher: 'Canonical'
     offer: 'ubuntu-24_04-lts'
     sku: 'server'
     version: 'latest'
   }
-  'Ubuntu 24.04-LTS (arm64)': {
-    publisher: 'Canonical'
-    offer: 'ubuntu-24_04-lts'
-    sku: 'server-arm64'
-    version: 'latest'
-  }
-  'Ubuntu 22.04-LTS': {
-    publisher: 'Canonical'
-    offer: '0001-com-ubuntu-server-jammy'
-    sku: '22_04-lts-gen2'
-    version: 'latest'
-  }
-  'Azure Linux 3': {
-    publisher: 'MicrosoftCBLMariner'
-    offer: 'azure-linux-3'
-    sku: 'azure-linux-3-gen2'
+  'Azure Linux 4': {
+    publisher: 'microsoftazurelinux'
+    offer: 'azurelinux-4'
+    sku: '4'
     version: 'latest'
   }
 }
 
-var resolvedVmSize = osImage == 'Ubuntu 24.04-LTS (arm64)' ? 'Standard_D2ps_v6' : vmSize
+var resolvedVmSize = osImage == 'Ubuntu 26.04-LTS (arm64)' ? 'Standard_D2ps_v6' : vmSize
 
 // Base network security group rules
 var nsgSecurityRulesBase = [

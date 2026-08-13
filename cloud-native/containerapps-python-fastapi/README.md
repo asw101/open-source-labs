@@ -1,7 +1,5 @@
 # Cloud Native Python with Azure Container Apps, Azure Container Registry, and FastAPI on PyPy
 
-[Walkthrough (vimeo.com)](https://vimeo.com/695948817/572d6bbbcd)
-
 In this lab you will containerize an existing Python application using the Azure CLI, a private Azure Container Registry, and Azure Container Registry Tasks. You will then deploy it to Azure Container Apps.
 
 Azure Container Apps enables you to run microservices and containerized applications on a serverless platform. With Container Apps, you enjoy the benefits of running containers while leaving behind the concerns of manually configuring cloud infrastructure and complex container orchestrators.
