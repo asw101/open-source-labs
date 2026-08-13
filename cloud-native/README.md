@@ -19,7 +19,6 @@
 - [Lab: Minimal Azure Kubernetes Service deployment using Azure Verified Modules](aks-avm/)
 - [Lab: Azure Kubernetes Service with ARM64 node pools and Terraform](aks-arm64-terraform/)
 - Lab: Web Application Routing with Azure Kubernetes Service (returning soon)
-- [Lab: Azure Kubernetes Service with Open Service Mesh and Terraform](./aks-open-service-mesh-terraform/)
 - [Run scalable and resilient Redis with Kubernetes and Azure Kubernetes Service (techcommunity.microsoft.com)](https://techcommunity.microsoft.com/t5/apps-on-azure-blog/run-scalable-and-resilient-redis-with-kubernetes-and-azure/ba-p/3247956) 
   - [Walkthrough (aaronmsft.com)](https://aaronmsft.com/posts/oss-aks-redis/)
 - [Lab: Getting started with Azure Kubernetes Service](https://aka.ms/reactor/aks-workshop)
