@@ -1,0 +1,111 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.46.1.21595",
+      "templateHash": "17705328008685193814"
+    }
+  },
+  "parameters": {
+    "clusterName": {
+      "type": "string",
+      "defaultValue": "aks-kubeflow-automatic",
+      "metadata": {
+        "description": "Name of the AKS cluster."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Azure region for the cluster. Defaults to the resource group location."
+      }
+    },
+    "signedinuser": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Object ID granted Azure Kubernetes Service RBAC Cluster Admin on the cluster. Required for Automatic, which uses Microsoft Entra ID authentication. Leave empty to skip the role assignment."
+      }
+    },
+    "signedinuserType": {
+      "type": "string",
+      "defaultValue": "User",
+      "allowedValues": [
+        "User",
+        "Group",
+        "ServicePrincipal"
+      ],
+      "metadata": {
+        "description": "Principal type of signedinuser."
+      }
+    },
+    "kubernetesVersion": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Kubernetes version. Leave empty to take the AKS default for the region."
+      }
+    }
+  },
+  "variables": {
+    "versionProperties": "[if(empty(parameters('kubernetesVersion')), createObject(), createObject('kubernetesVersion', parameters('kubernetesVersion')))]",
+    "aksRbacClusterAdminRoleId": "b1ff04bb-8a4e-4dc4-8eb5-8693973ce19b",
+    "dnsLabel": "[format('kubeflow-{0}', uniqueString(resourceGroup().id, parameters('clusterName'), toLower(parameters('location'))))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ContainerService/managedClusters",
+      "apiVersion": "2026-05-01",
+      "name": "[parameters('clusterName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Automatic",
+        "tier": "Standard"
+      },
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": "[variables('versionProperties')]"
+    },
+    {
+      "condition": "[not(empty(parameters('signedinuser')))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))]",
+      "name": "[guid(resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName')), parameters('signedinuser'), variables('aksRbacClusterAdminRoleId'))]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('aksRbacClusterAdminRoleId'))]",
+        "principalId": "[parameters('signedinuser')]",
+        "principalType": "[parameters('signedinuserType')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "aksClusterName": {
+      "type": "string",
+      "value": "[parameters('clusterName')]"
+    },
+    "kubernetesVersion": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName')), '2026-05-01').kubernetesVersion]"
+    },
+    "location": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName')), '2026-05-01', 'full').location]"
+    },
+    "dnsLabel": {
+      "type": "string",
+      "value": "[variables('dnsLabel')]"
+    },
+    "kubeflowHostname": {
+      "type": "string",
+      "value": "[format('{0}.{1}.cloudapp.azure.com', variables('dnsLabel'), toLower(parameters('location')))]"
+    }
+  }
+}

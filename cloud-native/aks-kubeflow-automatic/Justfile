@@ -1,0 +1,155 @@
+default:
+    @just --list
+
+resource_group := env_var_or_default("RESOURCE_GROUP", "")
+aks_name := env_var_or_default("AKS_NAME", "aks-kubeflow-automatic")
+signedinuser := env_var_or_default("SIGNEDINUSER", "")
+signedinuser_type := env_var_or_default("SIGNEDINUSER_TYPE", "User")
+
+export RESOURCE_GROUP := resource_group
+export AKS_NAME := aks_name
+export SIGNEDINUSER := signedinuser
+export SIGNEDINUSER_TYPE := signedinuser_type
+export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT := "1"
+
+# Compare generated ARM with its Bicep source and preview the deployment.
+validate:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    source versions.env
+    diff -u main.json <(az bicep build --file main.bicep --stdout)
+    : "${RESOURCE_GROUP:?Set RESOURCE_GROUP to an existing resource group}"
+    az deployment group what-if \
+        --resource-group "$RESOURCE_GROUP" \
+        --template-file main.bicep \
+        --parameters \
+            "clusterName=$AKS_NAME" \
+            "kubernetesVersion=$AKS_KUBERNETES_VERSION" \
+            "signedinuser=$SIGNEDINUSER" \
+            "signedinuserType=$SIGNEDINUSER_TYPE" \
+        --no-pretty-print
+
+# Deploy the AKS Automatic cluster at resource-group scope.
+deploy-aks:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    source versions.env
+    : "${RESOURCE_GROUP:?Set RESOURCE_GROUP to an existing resource group}"
+    az deployment group create \
+        --resource-group "$RESOURCE_GROUP" \
+        --template-file main.bicep \
+        --parameters \
+            "clusterName=$AKS_NAME" \
+            "kubernetesVersion=$AKS_KUBERNETES_VERSION" \
+            "signedinuser=$SIGNEDINUSER" \
+            "signedinuserType=$SIGNEDINUSER_TYPE"
+
+# Get credentials for the cluster. Automatic disables local accounts.
+credentials:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    : "${RESOURCE_GROUP:?Set RESOURCE_GROUP to an existing resource group}"
+    az aks get-credentials \
+        --resource-group "$RESOURCE_GROUP" \
+        --name "$AKS_NAME" \
+        --overwrite-existing
+    # A service principal or CI identity cannot complete the device-code prompt.
+    if [[ -n "${CI:-}" ]] || ! az account show --query user.type -o tsv | grep -q '^user$'; then
+        kubelogin convert-kubeconfig -l azurecli
+    fi
+
+# Download, verify, and prepare the pinned Kubeflow release.
+fetch-kubeflow:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    source versions.env
+    archive=".cache/community-distribution-${KUBEFLOW_VERSION}.tar.gz"
+    release_dir=".cache/community-distribution-${KUBEFLOW_VERSION}"
+    temp_archive="${archive}.tmp"
+    trap 'rm -f "$temp_archive"' EXIT
+    mkdir -p .cache
+
+    curl --fail --location --silent --show-error \
+        "https://codeload.github.com/kubeflow/community-distribution/tar.gz/refs/tags/${KUBEFLOW_VERSION}" \
+        --output "$temp_archive"
+    mv "$temp_archive" "$archive"
+    echo "$KUBEFLOW_ARCHIVE_SHA256  $archive" | sha256sum --check --strict
+
+    rm -rf -- "$release_dir"
+    mkdir -p "$release_dir"
+    tar -xzf "$archive" --strip-components=1 -C "$release_dir"
+    cp -R overlay "$release_dir/aks-overlay"
+
+    host="aks-kubeflow-automatic-repro.example.com"
+    printf '%s\n' \
+        "DNS_LABEL=aks-kubeflow-automatic-repro" \
+        "KUBEFLOW_HOST=$host" \
+        "DEX_ISSUER=https://${host}/dex" \
+        "DEX_LOGIN_URL=https://${host}/dex/auth" \
+        "OAUTH2_REDIRECT_URI=https://${host}/oauth2/callback" \
+        > "$release_dir/aks-overlay/params.env"
+    sed \
+        -e "s|@@DEX_ISSUER@@|https://${host}/dex|g" \
+        -e "s|@@OAUTH2_REDIRECT_URI@@|https://${host}/oauth2/callback|g" \
+        "$release_dir/aks-overlay/patches/dex-config.yaml.in" \
+        > "$release_dir/aks-overlay/patches/dex-config.yaml"
+    ! grep -q '@@' "$release_dir/aks-overlay/patches/dex-config.yaml"
+
+# Attempt the Kubeflow install once and record every rejection. Expected to fail.
+apply-kubeflow: fetch-kubeflow
+    #!/usr/bin/env bash
+    set -euo pipefail
+    source versions.env
+    release_dir=".cache/community-distribution-${KUBEFLOW_VERSION}"
+    log=".cache/apply.log"
+
+    printf 'Applying Kubeflow %s. This lab expects the cluster to reject it.\n' \
+        "$KUBEFLOW_VERSION"
+    if kustomize build "$release_dir/aks-overlay" |
+        kubectl apply --server-side --force-conflicts -f - > "$log" 2>&1; then
+        printf 'Kubeflow applied with no rejections. The incompatibility this lab documents is gone; re-read README.md before trusting it.\n'
+        exit 0
+    fi
+    printf 'Rejected, as documented. Run just report for the summary.\n'
+
+# Summarise which cluster policies rejected Kubeflow.
+report:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    log=".cache/apply.log"
+    test -s "$log" || {
+        printf 'No apply log. Run just apply-kubeflow first.\n' >&2
+        exit 1
+    }
+
+    printf '# Azure Policy (Gatekeeper) constraints\n'
+    grep -oE 'azurepolicy-[a-z0-9-]+' "$log" | sort | uniq -c | sort -rn || true
+    printf '\n# AKS managed ValidatingAdmissionPolicies\n'
+    grep -oE "ValidatingAdmissionPolicy '[^']+'" "$log" | sort | uniq -c | sort -rn || true
+    printf '\n# Rejected resources\n'
+    grep -oE '^Error from server \(Forbidden\): [a-z.]+ "[^"]+"' "$log" |
+        sed 's/^Error from server (Forbidden): //' | sort -u || true
+    printf '\n# Totals\n'
+    printf 'Forbidden: %s\n' "$(grep -c 'Error from server (Forbidden)' "$log" || true)"
+    printf 'Gatekeeper denials: %s\n' "$(grep -c 'validation.gatekeeper.sh' "$log" || true)"
+
+# Empty the resource group while preserving it and its scoped access.
+group-empty:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    : "${RESOURCE_GROUP:?Set RESOURCE_GROUP to an existing resource group}"
+    temp_dir="$(mktemp -d)"
+    empty_bicep="$temp_dir/empty.bicep"
+    trap 'rm -f "$empty_bicep"; rmdir "$temp_dir"' EXIT
+    : > "$empty_bicep"
+
+    printf 'Emptying RESOURCE_GROUP %s in 10 seconds.\n' "$RESOURCE_GROUP"
+    sleep 10
+    az deployment group create \
+        --resource-group "$RESOURCE_GROUP" \
+        --template-file "$empty_bicep" \
+        --mode Complete
+
+# Remove the downloaded and extracted Kubeflow release.
+clean-cache:
+    rm -rf -- .cache

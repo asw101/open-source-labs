@@ -6,6 +6,8 @@
 - [Lab: Azure Kubernetes Service with ARM64 node pools using raw Bicep](aks-arm/)
 - [Lab: Minimal Azure Kubernetes Service deployment using Azure Verified Modules](aks-avm/)
 - [Lab: Azure Kubernetes Service with ARM64 node pools and Terraform](aks-arm64-terraform/)
+- [Lab: Kubeflow on Azure Kubernetes Service](aks-kubeflow/)
+- [Reproduction: Kubeflow cannot be installed on AKS Automatic](aks-kubeflow-automatic/)
 
 ## Kubernetes Event-driven Autoscaling (KEDA) & KEDA HTTP Add-on
 
