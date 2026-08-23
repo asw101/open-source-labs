@@ -101,12 +101,12 @@ satisfies() {
 declare -A EXCLUDED=()
 
 _scan() {
-    local commit="" author="" body="" -; local -A labs=()
+    local commit="" author="" freshness="" -; local -A labs=()
     while IFS= read -r line; do
         case "$line" in
             $'\x01'*)
-                _flush "$commit" "$author" "$body" "$(printf '%s\n' "${!labs[@]}" | grep -c .)"
-                IFS=$'\x02' read -r commit author body <<<"${line#$'\x01'}"
+                _flush "$commit" "$author" "$freshness" "$(printf '%s\n' "${!labs[@]}" | grep -c .)"
+                IFS=$'\x02' read -r commit author freshness <<<"${line#$'\x01'}"
                 labs=()
                 ;;
             "") ;;
@@ -117,15 +117,15 @@ _scan() {
                 ;;
         esac
     done
-    _flush "$commit" "$author" "$body" "$(printf '%s\n' "${!labs[@]}" | grep -c .)"
+    _flush "$commit" "$author" "$freshness" "$(printf '%s\n' "${!labs[@]}" | grep -c .)"
 }
 
 _flush() {
-    local commit=$1 author=$2 body=$3 n=$4
+    local commit=$1 author=$2 freshness=$3 n=$4
     [ -z "$commit" ] && return 0
     if [ "$n" -ge "$SWEEP_THRESHOLD" ]; then
         EXCLUDED["$commit"]="sweep($n labs)"
-    elif [[ "$body" == *"Freshness: skip"* ]]; then
+    elif [ "$freshness" = "skip" ]; then
         EXCLUDED["$commit"]="opt-out"
     elif [[ "$author" == *"[bot]"* || "$author" == *"dependabot"* ]]; then
         EXCLUDED["$commit"]="bot"
@@ -134,7 +134,7 @@ _flush() {
 
 # %x01 marks a commit header; %x02 separates its fields. Neither appears in
 # commit text, so the stream stays unambiguous against filenames.
-_scan < <(git log --format=$'\x01%H\x02%an\x02%f' --name-only)
+_scan < <(git log --format=$'\x01%H\x02%an\x02%(trailers:key=Freshness,valueonly,separator=%x20)' --name-only)
 
 # ------------------------------------------------------------------- derive --
 last_substantive() {
