@@ -1,5 +1,5 @@
 {
-  "_comment": "Validation ledger. last_validated is asserted by a human or CI that actually ran the lab; it is never derived from git. Set it when you deploy the lab and see it work. See scripts/lab-freshness.sh.",
+  "_comment": "Validation ledger. last_validated is asserted by a human or CI that actually ran the lab; it is never derived from git. Set it when you deploy the lab and see it work. Auxiliary Markdown walkthroughs are review-time concerns outside this ledger; see scripts/lab-freshness.sh.",
   "labs": [
     {
       "path": "cloud-native/aks-arm",

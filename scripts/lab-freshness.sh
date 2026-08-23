@@ -14,6 +14,12 @@
 # last proved it works — that is the signal worth acting on, and it is why the
 # two dates are not collapsed into one.
 #
+# Auxiliary lab walkthroughs such as BASTION.md and PORTAL.md are outside this
+# ledger. The deployment-evidence track records commands run against Azure and
+# establishes whether a template deploys. No repository script validates
+# Markdown snippets, so their correctness is a review-time concern rather than
+# evidence that can be recorded as a method token.
+#
 # A commit does not count towards `updated` when it:
 #   - touches SWEEP_THRESHOLD or more labs (a repo-wide sweep, not lab work)
 #   - carries a `Freshness: skip` trailer (explicit opt-out)
