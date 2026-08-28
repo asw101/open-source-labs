@@ -8,6 +8,7 @@ certificate_mode="${4:?certificate mode is required}"
 dns_label="${5-}"
 azure_region="${6-}"
 action="${7-install}"
+size="${8-standard}"
 
 namespace='wasm-directory'
 
@@ -22,6 +23,23 @@ case "$action" in
     install|wait) ;;
     *)
         printf 'Unknown action: %s\n' "$action" >&2
+        exit 1
+        ;;
+esac
+
+case "$size" in
+    standard)
+        backend_storage='16Gi'
+        frontend_replicas='2'
+        frontend_strategy=''
+        ;;
+    dev)
+        backend_storage='4Gi'
+        frontend_replicas='1'
+        frontend_strategy=$'  strategy:\n    type: Recreate'
+        ;;
+    *)
+        printf 'Unknown size: %s. Use standard or dev.\n' "$size" >&2
         exit 1
         ;;
 esac
@@ -194,19 +212,22 @@ helm upgrade --install cert-manager \
 
 kubectl create namespace "$namespace" --dry-run=client --output=yaml | kubectl apply -f -
 
-# The PostgreSQL password is generated in-cluster on first install and never
-# leaves it. Re-running the installer must not rotate it: the existing
-# PersistentVolumeClaim still holds a database initialised with the old value,
-# and a rotated Secret would leave the backend unable to authenticate.
-if kubectl get secret wasm-directory-postgres --namespace "$namespace" >/dev/null 2>&1; then
-    printf 'Reusing the existing PostgreSQL password Secret.\n'
-else
-    printf 'Generating a PostgreSQL password.\n'
-    kubectl create secret generic wasm-directory-postgres \
-        --namespace "$namespace" \
-        --from-literal=POSTGRES_USER=registry \
-        --from-literal=POSTGRES_DB=registry \
-        --from-literal=POSTGRES_PASSWORD="$(head -c 32 /dev/urandom | base64 | tr -d '=+/' | cut -c1-32)"
+if [[ "$size" == "standard" ]]; then
+    # The PostgreSQL password is generated in-cluster on first install and
+    # never leaves it. Re-running the installer must not rotate it: the
+    # existing PersistentVolumeClaim still holds a database initialised with
+    # the old value, and a rotated Secret would leave the backend unable to
+    # authenticate.
+    if kubectl get secret wasm-directory-postgres --namespace "$namespace" >/dev/null 2>&1; then
+        printf 'Reusing the existing PostgreSQL password Secret.\n'
+    else
+        printf 'Generating a PostgreSQL password.\n'
+        kubectl create secret generic wasm-directory-postgres \
+            --namespace "$namespace" \
+            --from-literal=POSTGRES_USER=registry \
+            --from-literal=POSTGRES_DB=registry \
+            --from-literal=POSTGRES_PASSWORD="$(head -c 32 /dev/urandom | base64 | tr -d '=+/' | cut -c1-32)"
+    fi
 fi
 
 if [[ "$certificate_mode" == "selfsigned" ]]; then
@@ -294,17 +315,15 @@ spec:
 EOF
 fi
 
-# PostgreSQL. A single-replica StatefulSet with one PersistentVolumeClaim keeps
-# the lab self-contained: the whole registry, database included, is Kubernetes
-# objects a reader can inspect. It is deliberately not a production database.
-# For a managed alternative, the upstream repository already ships
-# infra/modules/postgresql.bicep for Azure Database for PostgreSQL Flexible
-# Server; point COMPONENT_DATABASE_URL at that instead and delete this
-# StatefulSet.
-#
-# PGDATA is a subdirectory of the mount because the Azure disk is formatted
-# ext4 and its lost+found directory makes initdb refuse a mount-point PGDATA.
-cat >> "$work_dir/application.yaml" <<EOF
+if [[ "$size" == "standard" ]]; then
+    # PostgreSQL. A single-replica StatefulSet with one PersistentVolumeClaim
+    # keeps the standard lab self-contained. It is deliberately not a
+    # production database.
+    #
+    # PGDATA is a subdirectory of the mount because the Azure disk is formatted
+    # ext4 and its lost+found directory makes initdb refuse a mount-point
+    # PGDATA.
+    cat >> "$work_dir/application.yaml" <<EOF
 ---
 apiVersion: v1
 kind: Service
@@ -394,6 +413,7 @@ spec:
           requests:
             storage: 8Gi
 EOF
+fi
 
 # The backend is a single-replica StatefulSet with its own PersistentVolumeClaim.
 # Both halves of that sentence are deliberate; the README explains the evidence.
@@ -455,6 +475,10 @@ spec:
             # to defaults instead of aborting startup.
             - name: HOME
               value: /data
+EOF
+
+if [[ "$size" == "standard" ]]; then
+    cat >> "$work_dir/application.yaml" <<EOF
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
@@ -472,6 +496,15 @@ spec:
                   key: POSTGRES_DB
             - name: COMPONENT_DATABASE_URL
               value: postgres://\$(POSTGRES_USER):\$(POSTGRES_PASSWORD)@postgres:5432/\$(POSTGRES_DB)
+EOF
+else
+    cat >> "$work_dir/application.yaml" <<'EOF'
+            - name: COMPONENT_DATABASE_URL
+              value: sqlite:///data/registry.db?mode=rwc
+EOF
+fi
+
+cat >> "$work_dir/application.yaml" <<EOF
           ports:
             - name: http
               containerPort: 8081
@@ -512,7 +545,7 @@ spec:
           - ReadWriteOnce
         resources:
           requests:
-            storage: 16Gi
+            storage: $backend_storage
 EOF
 
 # The backend Service is named "backend" and listens on port 80 because the
@@ -543,7 +576,8 @@ metadata:
   name: frontend
   namespace: $namespace
 spec:
-  replicas: 2
+  replicas: $frontend_replicas
+$frontend_strategy
   selector:
     matchLabels:
       app: frontend
@@ -741,7 +775,9 @@ EOF
 
 kubectl apply -f "$work_dir/application.yaml"
 
-kubectl rollout status statefulset/postgres --namespace "$namespace" --timeout=10m
+if [[ "$size" == "standard" ]]; then
+    kubectl rollout status statefulset/postgres --namespace "$namespace" --timeout=10m
+fi
 kubectl rollout status statefulset/backend --namespace "$namespace" --timeout=10m
 kubectl rollout status deployment/frontend --namespace "$namespace" --timeout=10m
 

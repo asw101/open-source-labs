@@ -4,8 +4,11 @@ default:
 resource_group := env_var_or_default("RESOURCE_GROUP", `date +%Y-%m` + "-aks-wasm-directory")
 location := env_var_or_default("LOCATION", "canadacentral")
 aks_name := env_var_or_default("AKS_NAME", "aks-wasm-directory")
-vm_size := env_var_or_default("VM_SIZE", "Standard_D2s_v5")
-node_count := env_var_or_default("NODE_COUNT", "2")
+size := env_var_or_default("SIZE", "standard")
+vm_size := env_var_or_default("VM_SIZE", if size == "dev" { "Standard_B2s" } else { "Standard_D2s_v5" })
+node_count := env_var_or_default("NODE_COUNT", if size == "dev" { "1" } else { "2" })
+os_disk_size := env_var_or_default("OS_DISK_SIZE", if size == "dev" { "30" } else { "0" })
+os_disk_type := env_var_or_default("OS_DISK_TYPE", if size == "dev" { "Ephemeral" } else { "Managed" })
 domain := env_var_or_default("DOMAIN", "")
 dns_label := env_var_or_default("DNS_LABEL", "")
 self_signed := env_var_or_default("SELF_SIGNED", "false")
@@ -14,8 +17,11 @@ acme_email := env_var_or_default("ACME_EMAIL", "")
 export RESOURCE_GROUP := resource_group
 export LOCATION := location
 export AKS_NAME := aks_name
+export SIZE := size
 export VM_SIZE := vm_size
 export NODE_COUNT := node_count
+export OS_DISK_SIZE := os_disk_size
+export OS_DISK_TYPE := os_disk_type
 export DOMAIN := domain
 export DNS_LABEL := dns_label
 export SELF_SIGNED := self_signed
@@ -25,6 +31,11 @@ export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT := "1"
 _validate-certificate-config:
     #!/usr/bin/env bash
     set -euo pipefail
+
+    if [[ "$SIZE" != "standard" && "$SIZE" != "dev" ]]; then
+        printf 'Invalid SIZE: %s. Use standard or dev.\n' "$SIZE" >&2
+        exit 1
+    fi
 
     if [[ "$SELF_SIGNED" != "true" && "$SELF_SIGNED" != "false" ]]; then
         printf 'Invalid SELF_SIGNED: %s. Use true or false.\n' "$SELF_SIGNED" >&2
@@ -62,16 +73,29 @@ validate: _validate-certificate-config
             "clusterName=$AKS_NAME" \
             "vmSize=$VM_SIZE" \
             "nodeCount=$NODE_COUNT" \
+            "osDiskSizeGB=$OS_DISK_SIZE" \
+            "osDiskType=$OS_DISK_TYPE" \
             "domainName=$DOMAIN" \
             "dnsLabel=$DNS_LABEL" \
             "selfSigned=$SELF_SIGNED" \
             "acmeEmail=$ACME_EMAIL" \
         --no-pretty-print
 
-# Deploy AKS, then install PostgreSQL, the meta-registry, the frontend, and HTTPS.
+# Deploy AKS, then install the selected wasm.directory size and HTTPS.
 deploy: _validate-certificate-config
     #!/usr/bin/env bash
     set -euo pipefail
+
+    if [[ "$SIZE" == "dev" ]]; then
+        command -v kubectl >/dev/null || {
+            printf 'SIZE=dev requires kubectl on the client.\n' >&2
+            exit 1
+        }
+        command -v helm >/dev/null || {
+            printf 'SIZE=dev requires Helm on the client.\n' >&2
+            exit 1
+        }
+    fi
 
     IFS='|' read -r cluster_name app_domain dns_label cluster_location email certificate_mode < <(
         az deployment group create \
@@ -82,6 +106,8 @@ deploy: _validate-certificate-config
                 "clusterName=$AKS_NAME" \
                 "vmSize=$VM_SIZE" \
                 "nodeCount=$NODE_COUNT" \
+                "osDiskSizeGB=$OS_DISK_SIZE" \
+                "osDiskType=$OS_DISK_TYPE" \
                 "domainName=$DOMAIN" \
                 "dnsLabel=$DNS_LABEL" \
                 "selfSigned=$SELF_SIGNED" \
@@ -90,6 +116,26 @@ deploy: _validate-certificate-config
             --output tsv
     )
 
+    if [[ "$SIZE" == "dev" ]]; then
+        kubeconfig="$(mktemp)"
+        trap 'rm -f "$kubeconfig"' EXIT
+        az aks get-credentials \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$cluster_name" \
+            --file "$kubeconfig" \
+            --overwrite-existing
+        KUBECONFIG="$kubeconfig" bash install.sh \
+            "$cluster_name" \
+            "$app_domain" \
+            "$email" \
+            "$certificate_mode" \
+            "$dns_label" \
+            "$cluster_location" \
+            install \
+            "$SIZE"
+        exit 0
+    fi
+
     printf -v install_command '%q ' \
         bash install.sh \
         "$cluster_name" \
@@ -97,7 +143,9 @@ deploy: _validate-certificate-config
         "$email" \
         "$certificate_mode" \
         "$dns_label" \
-        "$cluster_location"
+        "$cluster_location" \
+        install \
+        "$SIZE"
 
     # `az aks command invoke` prints the in-cluster exit status as
     # "exitcode=N" and then returns 0 whatever happened, so a failing
@@ -121,13 +169,42 @@ deploy: _validate-certificate-config
         --command "$install_command"
 
 # Wait for HTTP-01 certificate issuance after creating the printed public DNS record.
-wait-http01:
+wait-http01: _validate-certificate-config
     #!/usr/bin/env bash
     set -euo pipefail
 
     if [[ -z "$DOMAIN" || "$SELF_SIGNED" == "true" ]]; then
         printf 'wait-http01 requires DOMAIN with SELF_SIGNED=false; DNS_LABEL is optional.\n' >&2
         exit 1
+    fi
+
+    if [[ "$SIZE" == "dev" ]]; then
+        command -v kubectl >/dev/null || {
+            printf 'SIZE=dev requires kubectl on the client.\n' >&2
+            exit 1
+        }
+        command -v helm >/dev/null || {
+            printf 'SIZE=dev requires Helm on the client.\n' >&2
+            exit 1
+        }
+
+        kubeconfig="$(mktemp)"
+        trap 'rm -f "$kubeconfig"' EXIT
+        az aks get-credentials \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$AKS_NAME" \
+            --file "$kubeconfig" \
+            --overwrite-existing
+        KUBECONFIG="$kubeconfig" bash install.sh \
+            "$AKS_NAME" \
+            "$DOMAIN" \
+            "$ACME_EMAIL" \
+            letsencrypt-http01 \
+            "$DNS_LABEL" \
+            "${LOCATION,,}" \
+            wait \
+            "$SIZE"
+        exit 0
     fi
 
     printf -v wait_command '%q ' \
@@ -138,7 +215,8 @@ wait-http01:
         letsencrypt-http01 \
         "$DNS_LABEL" \
         "${LOCATION,,}" \
-        wait
+        wait \
+        "$SIZE"
 
     # `az aks command invoke` prints the in-cluster exit status as
     # "exitcode=N" and then returns 0 whatever happened, so a failing
@@ -162,7 +240,7 @@ wait-http01:
         --command "$wait_command"
 
 # Prove the deployment end to end: a stock component CLI driving it over HTTPS.
-verify:
+verify: _validate-certificate-config
     #!/usr/bin/env bash
     set -euo pipefail
 
@@ -181,6 +259,25 @@ verify:
         printf 'verify does not apply to the self-signed path: %s does not resolve publicly and its certificate is not trusted.\n' "$app_domain" >&2
         printf 'Use the curl --resolve --insecure commands that just deploy printed instead.\n' >&2
         exit 1
+    fi
+
+    if [[ "$SIZE" == "dev" ]]; then
+        for command in kubectl curl jq openssl; do
+            command -v "$command" >/dev/null || {
+                printf 'SIZE=dev verification requires %s on the client.\n' "$command" >&2
+                exit 1
+            }
+        done
+
+        kubeconfig="$(mktemp)"
+        trap 'rm -f "$kubeconfig"' EXIT
+        az aks get-credentials \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$AKS_NAME" \
+            --file "$kubeconfig" \
+            --overwrite-existing
+        KUBECONFIG="$kubeconfig" bash verify.sh "$app_domain"
+        exit 0
     fi
 
     printf -v verify_command '%q ' bash verify.sh "$app_domain"

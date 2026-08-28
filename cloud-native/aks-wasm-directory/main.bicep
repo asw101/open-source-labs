@@ -12,6 +12,18 @@ param vmSize string = 'Standard_D2s_v5'
 @maxValue(5)
 param nodeCount int = 2
 
+@description('OS disk size in GiB for the system pool. 0 lets AKS pick its default.')
+@minValue(0)
+@maxValue(1024)
+param osDiskSizeGB int = 0
+
+@description('OS disk type for the system pool. Ephemeral requires a compatible VM size and disk size.')
+@allowed([
+  'Managed'
+  'Ephemeral'
+])
+param osDiskType string = 'Managed'
+
 @description('Public application hostname. Leave empty to use an Azure-provided DNS label.')
 param domainName string = ''
 
@@ -45,14 +57,18 @@ resource cluster 'Microsoft.ContainerService/managedClusters@2026-01-01' = {
     dnsPrefix: '${clusterName}-${suffix}'
     enableRBAC: true
     agentPoolProfiles: [
-      {
-        name: 'systempool'
-        count: nodeCount
-        vmSize: vmSize
-        mode: 'System'
-        osType: 'Linux'
-        osSKU: 'AzureLinux3'
-      }
+      union(
+        {
+          name: 'systempool'
+          count: nodeCount
+          vmSize: vmSize
+          mode: 'System'
+          osType: 'Linux'
+          osSKU: 'AzureLinux3'
+          osDiskType: osDiskType
+        },
+        osDiskSizeGB == 0 ? {} : { osDiskSizeGB: osDiskSizeGB }
+      )
     ]
     networkProfile: {
       networkPlugin: 'azure'

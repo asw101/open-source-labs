@@ -18,7 +18,9 @@ The lab finishes by pointing the project's **stock, unmodified `component` CLI**
 - An existing resource group
 - A domain is optional. The default path uses an Azure-provided hostname.
 
-Local `kubectl`, Helm, cluster credentials, and network access to the Kubernetes API aren't required. [`az aks command invoke`](https://learn.microsoft.com/cli/azure/aks/command#az-aks-command-invoke) supplies `kubectl` and Helm inside the cluster.
+The default `standard` size does not require local `kubectl`, Helm, cluster credentials, or network access to the Kubernetes API. [`az aks command invoke`](https://learn.microsoft.com/cli/azure/aks/command#az-aks-command-invoke) supplies `kubectl` and Helm inside the cluster.
+
+The smaller `dev` size requires [kubectl](https://kubernetes.io/docs/tasks/tools/), [Helm](https://helm.sh/docs/intro/install/), curl, jq, and OpenSSL on the client, plus network access to the Kubernetes API. The in-cluster command pod reserves 400m CPU and 1000Mi memory, which does not fit while the workload is scheduling on the 4 GiB development node.
 
 ## Instructions
 
@@ -41,7 +43,7 @@ Running `just` lists the available recipes.
 $ just
 Available recipes:
     default
-    deploy      # Deploy AKS, then install PostgreSQL, the meta-registry, the frontend, and HTTPS.
+    deploy      # Deploy AKS, then install the selected wasm.directory size and HTTPS.
     group-empty # Empty the resource group while preserving the group and its scoped access.
     validate    # Check generated ARM and preview the deployment without changing resources.
     verify      # Prove the deployment end to end: a stock component CLI driving it over HTTPS.
@@ -58,9 +60,46 @@ just verify
 
 `validate` builds fresh ARM JSON from [main.bicep](./main.bicep), requires an empty diff against the committed [main.json](./main.json), syntax-checks both shell scripts, and requests a resource-group-scoped what-if preview.
 
-`deploy` runs one ARM deployment to create the cluster, then one `az aks command invoke` that installs Envoy Gateway, cert-manager, PostgreSQL, the meta-registry backend, the Wasm frontend, the Gateway, and the routes. It waits for the certificate and prints the endpoint. Expect roughly 15 minutes end to end, most of it cluster creation and the Let's Encrypt HTTP-01 round trip.
+`deploy` runs one ARM deployment to create the cluster, then installs Envoy Gateway, cert-manager, the database, the meta-registry backend, the Wasm frontend, the Gateway, and the routes. The standard size uses `az aks command invoke`; the dev size obtains a temporary client kubeconfig and runs Helm and the installer locally. It waits for the certificate and prints the endpoint. Expect roughly 15 minutes end to end, most of it cluster creation and the Let's Encrypt HTTP-01 round trip.
 
-`verify` is the part to read the output of. It runs [verify.sh](./verify.sh) inside the cluster against the public endpoint and checks the certificate is publicly trusted and issued by Let's Encrypt, that TLS 1.3 is accepted and TLS 1.2 rejected, that HTTP redirects, that `/` serves the Wasm frontend and `/v1` the registry API, that the indexer has actually indexed packages, and finally that a stock `component` CLI can sync through the deployment.
+`verify` is the part to read the output of. It runs [verify.sh](./verify.sh) against the public endpoint, inside the cluster for `standard` and from the client for `dev`. It checks the certificate is publicly trusted and issued by Let's Encrypt, that TLS 1.3 is accepted and TLS 1.2 rejected, that HTTP redirects, that `/` serves the Wasm frontend and `/v1` the registry API, that the indexer has actually indexed packages, and finally that a stock `component` CLI can sync through the deployment.
+
+### Size profiles
+
+`SIZE=standard|dev` selects the complete cluster and workload profile. It defaults to `standard`.
+
+| Setting | `standard` | `dev` |
+| --- | --- | --- |
+| Nodes | 2 x `Standard_D2s_v5` | 1 x `Standard_B2s` |
+| OS disk | AKS default managed disk | 30 GiB ephemeral disk |
+| Database | PostgreSQL 17, 8Gi PVC | SQLite on the backend's 4Gi PVC |
+| Backend | 1 replica, 16Gi PVC | 1 replica, 4Gi PVC |
+| Frontend | 2 replicas | 1 replica |
+| Installer | In-cluster command pod | Local Helm and kubectl |
+
+The standard profile preserves the original lab behavior. The dev default is the configuration proven end to end on a 4 GiB burstable node, with no billed OS disk. It has no node redundancy, no rolling-update overlap for the frontend, does not rehearse PostgreSQL, and leaves little scheduling headroom.
+
+Choose the profile when creating a cluster. Agent-pool VM and OS disk properties are immutable, and the backend StatefulSet changes its database and PVC template between profiles. To switch an existing deployment, use a different `AKS_NAME`, or empty a dedicated lab resource group before redeploying.
+
+Deploy the development profile with:
+
+```bash
+SIZE=dev just validate
+SIZE=dev just deploy
+SIZE=dev just verify
+```
+
+`VM_SIZE`, `NODE_COUNT`, `OS_DISK_SIZE`, and `OS_DISK_TYPE` remain independently configurable. The dev defaults select the tested `Standard_B2s` with a free ephemeral OS disk:
+
+```bash
+SIZE=dev \
+VM_SIZE=Standard_B2s \
+OS_DISK_TYPE=Ephemeral \
+OS_DISK_SIZE=30 \
+just deploy
+```
+
+An ephemeral OS disk is recreated when AKS replaces or deallocates the node. The backend data remains on its separate managed-disk PVC. To use the previously proven managed-disk shape instead, set `VM_SIZE=Standard_B2ls_v2 OS_DISK_TYPE=Managed OS_DISK_SIZE=32`; at the measured retail rates it costs $61.02/month instead of $56.22/month.
 
 ### Certificate paths
 
@@ -78,11 +117,11 @@ The Azure DNS DNS-01 path with ExternalDNS is deliberately not reproduced here; 
 
 ## What gets deployed
 
-- AKS with Azure Linux 3 and two `Standard_D2s_v5` nodes
+- AKS with Azure Linux 3 using the selected size profile
 - Envoy Gateway 1.9.0, cert-manager 1.21.1, and Gateway API resources
-- PostgreSQL 17 as a single-replica `StatefulSet` with an 8Gi `PersistentVolumeClaim`
-- `component-meta-registry` as a single-replica `StatefulSet` with a 16Gi `PersistentVolumeClaim`
-- `component-frontend`, two replicas, a `wasm32-wasip2` component under `wasmtime serve`
+- PostgreSQL 17 with an 8Gi PVC for `standard`, or SQLite on the backend PVC for `dev`
+- `component-meta-registry` as a single-replica `StatefulSet` with a profile-sized PVC
+- `component-frontend`, two replicas for `standard` or one for `dev`, serving a `wasm32-wasip2` component under `wasmtime serve`
 - One `Gateway` with an HTTP listener that redirects, and an HTTPS listener whose certificate Secret cert-manager generates and renews
 - Two `HTTPRoute`s on the HTTPS listener: `/v1` to the registry API, `/` to the frontend
 
@@ -142,11 +181,11 @@ It deliberately does **not** assert that the search immediately afterwards retur
 
 `verify.sh` checks the server-side search separately for exactly this reason, so the lab still proves that search works without asserting client behaviour the CLI does not currently have. If you are evaluating the registry and it looks empty from the CLI, this is why, and it is not something the deployment did.
 
-## Why PostgreSQL runs in the cluster
+## Why the standard size runs PostgreSQL in the cluster
 
 The upstream repository already ships [`infra/modules/postgresql.bicep`](https://github.com/yoshuawuyts/wasm.directory/blob/main/infra) for Azure Database for PostgreSQL Flexible Server, and for anything real that is the better answer: backups, patching, and failover stop being your problem.
 
-This lab runs PostgreSQL in-cluster anyway, so that the whole registry is Kubernetes objects a reader can inspect, change, and delete in one place, with no second provisioning path and no private networking to arrange. It is explicitly not a production database: one replica, no backups, and a `PersistentVolumeClaim` that outlives the pod but not `just group-empty`. To switch, delete the `postgres` `StatefulSet` and `Service` from [install.sh](./install.sh) and point `COMPONENT_DATABASE_URL` at the managed server.
+The standard profile runs PostgreSQL in-cluster anyway, so that the whole registry is Kubernetes objects a reader can inspect, change, and delete in one place, with no second provisioning path and no private networking to arrange. It is explicitly not a production database: one replica, no backups, and a `PersistentVolumeClaim` that outlives the pod but not `just group-empty`. The dev profile instead uses SQLite on the backend's managed-disk PVC so the complete stack fits on one 4 GiB node. To use a managed PostgreSQL server, point `COMPONENT_DATABASE_URL` at it and remove the in-cluster PostgreSQL objects from [install.sh](./install.sh).
 
 The password is generated inside the cluster on first install and stored only in a Secret. Re-running the installer deliberately reuses the existing Secret rather than rotating it, because the `PersistentVolumeClaim` still holds a database initialised with the old value.
 

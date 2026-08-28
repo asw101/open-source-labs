@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Prove the deployment end to end, from inside the cluster.
+# Prove the deployment end to end from a client with cluster credentials.
 #
 # Every check here goes over the public HTTPS endpoint, not through a Service
 # or a port-forward, so it exercises the same path a reader's browser and CLI
@@ -11,6 +11,8 @@ domain="${1:?application domain is required}"
 namespace='wasm-directory'
 base="https://$domain"
 failures=0
+frontend_html="$(mktemp)"
+trap 'rm -f "$frontend_html"' EXIT
 
 backend_image="$(kubectl get statefulset backend --namespace "$namespace" \
     --output=jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true)"
@@ -81,9 +83,9 @@ fi
 # 5. Routing: / reaches the Wasm frontend, /v1 reaches the meta-registry. The
 #    frontend is a WebAssembly component served by `wasmtime serve`, so this
 #    also confirms that workload is reachable through the Gateway.
-front_code="$(curl -sS -o /tmp/frontend.html -w '%{http_code}' "$base/" 2>&1)"
-if [[ "$front_code" == "200" ]] && grep -qi '<html' /tmp/frontend.html; then
-    pass "GET / returned 200 HTML from the Wasm frontend ($(wc -c < /tmp/frontend.html) bytes)"
+front_code="$(curl -sS -o "$frontend_html" -w '%{http_code}' "$base/" 2>&1)"
+if [[ "$front_code" == "200" ]] && grep -qi '<html' "$frontend_html"; then
+    pass "GET / returned 200 HTML from the Wasm frontend ($(wc -c < "$frontend_html") bytes)"
 else
     fail "GET / returned '$front_code' and did not look like HTML"
 fi

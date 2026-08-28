@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "4681228222053259856"
+      "templateHash": "15124270357492905680"
     }
   },
   "parameters": {
@@ -37,6 +37,26 @@
       "maxValue": 5,
       "metadata": {
         "description": "Node count. Two nodes give the registry, PostgreSQL, Envoy Gateway, and cert-manager room to schedule."
+      }
+    },
+    "osDiskSizeGB": {
+      "type": "int",
+      "defaultValue": 0,
+      "minValue": 0,
+      "maxValue": 1024,
+      "metadata": {
+        "description": "OS disk size in GiB for the system pool. 0 lets AKS pick its default."
+      }
+    },
+    "osDiskType": {
+      "type": "string",
+      "defaultValue": "Managed",
+      "allowedValues": [
+        "Managed",
+        "Ephemeral"
+      ],
+      "metadata": {
+        "description": "OS disk type for the system pool. Ephemeral requires a compatible VM size and disk size."
       }
     },
     "domainName": {
@@ -93,14 +113,7 @@
         "dnsPrefix": "[format('{0}-{1}', parameters('clusterName'), variables('suffix'))]",
         "enableRBAC": true,
         "agentPoolProfiles": [
-          {
-            "name": "systempool",
-            "count": "[parameters('nodeCount')]",
-            "vmSize": "[parameters('vmSize')]",
-            "mode": "System",
-            "osType": "Linux",
-            "osSKU": "AzureLinux3"
-          }
+          "[union(createObject('name', 'systempool', 'count', parameters('nodeCount'), 'vmSize', parameters('vmSize'), 'mode', 'System', 'osType', 'Linux', 'osSKU', 'AzureLinux3', 'osDiskType', parameters('osDiskType')), if(equals(parameters('osDiskSizeGB'), 0), createObject(), createObject('osDiskSizeGB', parameters('osDiskSizeGB'))))]"
         ],
         "networkProfile": {
           "networkPlugin": "azure",
