@@ -95,11 +95,29 @@ fi
 queue="$(curl -sS "$base/v1/queue" 2>&1)"
 printf '        queue: %s\n' "${queue:0:400}"
 
-package_count="$(curl -sS "$base/v1/packages" 2>/dev/null | jq 'length' 2>/dev/null || echo 0)"
-if [[ "${package_count:-0}" -gt 0 ]]; then
-    pass "/v1/packages reports $package_count indexed packages"
+# The queue counters are the only true totals this API exposes, so the
+# indexer's progress is asserted from them. /v1/packages is paginated: it
+# returns 20 by default and the server clamps limit to 100, so a length taken
+# from it is a page size. Reporting that as a package total would understate a
+# healthy registry by an order of magnitude, which is how this check first read.
+completed="$(printf '%s' "$queue" | jq -r '.completed // 0' 2>/dev/null || echo 0)"
+failed="$(printf '%s' "$queue" | jq -r '.failed // 0' 2>/dev/null || echo 0)"
+if [[ "${completed:-0}" -gt 0 ]]; then
+    pass "the indexer has completed $completed tasks"
 else
-    fail "/v1/packages reports no indexed packages; the indexer has not completed a cycle"
+    fail "the indexer has completed no tasks; it has not finished a cycle"
+fi
+if [[ "${failed:-0}" -eq 0 ]]; then
+    pass "the indexer reports no failed tasks"
+else
+    fail "the indexer reports $failed failed task(s)"
+fi
+
+page_count="$(curl -sS "$base/v1/packages" 2>/dev/null | jq 'length' 2>/dev/null || echo 0)"
+if [[ "${page_count:-0}" -gt 0 ]]; then
+    pass "/v1/packages served a first page of $page_count packages"
+else
+    fail "/v1/packages returned an empty first page"
 fi
 
 recent="$(curl -sS "$base/v1/packages/recent?limit=5" 2>&1)"
