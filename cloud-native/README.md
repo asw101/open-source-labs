@@ -3,6 +3,7 @@
 ## Azure Kubernetes Service
 
 - [Lab: Serve an AKS application over automatic HTTPS with Gateway API](aks-https-gateway/)
+- [Lab: Run the wasm.directory component registry on AKS over automatic HTTPS](aks-wasm-directory/)
 - [Lab: Azure Kubernetes Service with ARM64 node pools using raw Bicep](aks-arm/)
 - [Lab: Minimal Azure Kubernetes Service deployment using Azure Verified Modules](aks-avm/)
 - [Lab: Azure Kubernetes Service with ARM64 node pools and Terraform](aks-arm64-terraform/)

@@ -1,0 +1,223 @@
+default:
+    @just --list
+
+resource_group := env_var_or_default("RESOURCE_GROUP", `date +%Y-%m` + "-aks-wasm-directory")
+location := env_var_or_default("LOCATION", "canadacentral")
+aks_name := env_var_or_default("AKS_NAME", "aks-wasm-directory")
+vm_size := env_var_or_default("VM_SIZE", "Standard_D2s_v5")
+node_count := env_var_or_default("NODE_COUNT", "2")
+domain := env_var_or_default("DOMAIN", "")
+dns_label := env_var_or_default("DNS_LABEL", "")
+self_signed := env_var_or_default("SELF_SIGNED", "false")
+acme_email := env_var_or_default("ACME_EMAIL", "")
+
+export RESOURCE_GROUP := resource_group
+export LOCATION := location
+export AKS_NAME := aks_name
+export VM_SIZE := vm_size
+export NODE_COUNT := node_count
+export DOMAIN := domain
+export DNS_LABEL := dns_label
+export SELF_SIGNED := self_signed
+export ACME_EMAIL := acme_email
+export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT := "1"
+
+_validate-certificate-config:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    if [[ "$SELF_SIGNED" != "true" && "$SELF_SIGNED" != "false" ]]; then
+        printf 'Invalid SELF_SIGNED: %s. Use true or false.\n' "$SELF_SIGNED" >&2
+        exit 1
+    fi
+
+    if [[ "$SELF_SIGNED" == "true" && -n "$DOMAIN" ]]; then
+        printf 'SELF_SIGNED=true cannot be combined with DOMAIN.\n' >&2
+        exit 1
+    fi
+
+    if [[ -n "$DNS_LABEL" ]]; then
+        if (( ${#DNS_LABEL} > 63 )) || [[ ! "$DNS_LABEL" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ ]]; then
+            printf 'Invalid DNS_LABEL: %s. Use 1-63 lowercase letters, digits, or hyphens, starting and ending with a letter or digit.\n' "$DNS_LABEL" >&2
+            exit 1
+        fi
+    fi
+
+    if [[ -n "$DOMAIN" && -z "$DNS_LABEL" && "$SELF_SIGNED" != "true" ]]; then
+        printf 'DOMAIN without DNS_LABEL is supported, but the deployment will print a raw Gateway IP for an A record instead of a stable Azure alias target.\n' >&2
+    fi
+
+# Check generated ARM and preview the deployment without changing resources.
+validate: _validate-certificate-config
+    #!/usr/bin/env bash
+    set -euo pipefail
+    diff -u main.json <(az bicep build --file main.bicep --stdout)
+    bash -n install.sh
+    bash -n verify.sh
+    az deployment group what-if \
+        --resource-group "$RESOURCE_GROUP" \
+        --template-file main.bicep \
+        --parameters \
+            "location=$LOCATION" \
+            "clusterName=$AKS_NAME" \
+            "vmSize=$VM_SIZE" \
+            "nodeCount=$NODE_COUNT" \
+            "domainName=$DOMAIN" \
+            "dnsLabel=$DNS_LABEL" \
+            "selfSigned=$SELF_SIGNED" \
+            "acmeEmail=$ACME_EMAIL" \
+        --no-pretty-print
+
+# Deploy AKS, then install PostgreSQL, the meta-registry, the frontend, and HTTPS.
+deploy: _validate-certificate-config
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    IFS='|' read -r cluster_name app_domain dns_label cluster_location email certificate_mode < <(
+        az deployment group create \
+            --resource-group "$RESOURCE_GROUP" \
+            --template-file main.bicep \
+            --parameters \
+                "location=$LOCATION" \
+                "clusterName=$AKS_NAME" \
+                "vmSize=$VM_SIZE" \
+                "nodeCount=$NODE_COUNT" \
+                "domainName=$DOMAIN" \
+                "dnsLabel=$DNS_LABEL" \
+                "selfSigned=$SELF_SIGNED" \
+                "acmeEmail=$ACME_EMAIL" \
+            --query "join('|', [properties.outputs.clusterName.value, properties.outputs.domainName.value, properties.outputs.dnsLabel.value, properties.outputs.clusterLocation.value, properties.outputs.acmeEmail.value, properties.outputs.certificateMode.value])" \
+            --output tsv
+    )
+
+    printf -v install_command '%q ' \
+        bash install.sh \
+        "$cluster_name" \
+        "$app_domain" \
+        "$email" \
+        "$certificate_mode" \
+        "$dns_label" \
+        "$cluster_location"
+
+    # `az aks command invoke` prints the in-cluster exit status as
+    # "exitcode=N" and then returns 0 whatever happened, so a failing
+    # install.sh or verify.sh would otherwise look like success. Read the
+    # status back out of the output rather than trusting the CLI's own.
+    run_in_cluster() {
+        local output
+        output="$(az aks command invoke "$@" 2>&1)"
+        printf '%s\n' "$output"
+        if printf '%s' "$output" | grep -qE 'exitcode=0($|[^0-9])'; then
+            return 0
+        fi
+        printf '\nThe in-cluster command reported a non-zero exit status.\n' >&2
+        return 1
+    }
+
+    run_in_cluster \
+        --resource-group "$RESOURCE_GROUP" \
+        --name "$cluster_name" \
+        --file install.sh \
+        --command "$install_command"
+
+# Wait for HTTP-01 certificate issuance after creating the printed public DNS record.
+wait-http01:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    if [[ -z "$DOMAIN" || "$SELF_SIGNED" == "true" ]]; then
+        printf 'wait-http01 requires DOMAIN with SELF_SIGNED=false; DNS_LABEL is optional.\n' >&2
+        exit 1
+    fi
+
+    printf -v wait_command '%q ' \
+        bash install.sh \
+        "$AKS_NAME" \
+        "$DOMAIN" \
+        "$ACME_EMAIL" \
+        letsencrypt-http01 \
+        "$DNS_LABEL" \
+        "${LOCATION,,}" \
+        wait
+
+    # `az aks command invoke` prints the in-cluster exit status as
+    # "exitcode=N" and then returns 0 whatever happened, so a failing
+    # install.sh or verify.sh would otherwise look like success. Read the
+    # status back out of the output rather than trusting the CLI's own.
+    run_in_cluster() {
+        local output
+        output="$(az aks command invoke "$@" 2>&1)"
+        printf '%s\n' "$output"
+        if printf '%s' "$output" | grep -qE 'exitcode=0($|[^0-9])'; then
+            return 0
+        fi
+        printf '\nThe in-cluster command reported a non-zero exit status.\n' >&2
+        return 1
+    }
+
+    run_in_cluster \
+        --resource-group "$RESOURCE_GROUP" \
+        --name "$AKS_NAME" \
+        --file install.sh \
+        --command "$wait_command"
+
+# Prove the deployment end to end: a stock component CLI driving it over HTTPS.
+verify:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    IFS='|' read -r app_domain certificate_mode < <(
+        az deployment group show \
+            --resource-group "$RESOURCE_GROUP" \
+            --name main \
+            --query "join('|', [properties.outputs.domainName.value, properties.outputs.certificateMode.value])" \
+            --output tsv
+    )
+
+    # Every check here reaches the deployment over public DNS with a publicly
+    # trusted certificate. The self-signed path has neither, so it would print
+    # a wall of failures that says nothing about whether the lab worked.
+    if [[ "$certificate_mode" == "selfsigned" ]]; then
+        printf 'verify does not apply to the self-signed path: %s does not resolve publicly and its certificate is not trusted.\n' "$app_domain" >&2
+        printf 'Use the curl --resolve --insecure commands that just deploy printed instead.\n' >&2
+        exit 1
+    fi
+
+    printf -v verify_command '%q ' bash verify.sh "$app_domain"
+
+    # `az aks command invoke` prints the in-cluster exit status as
+    # "exitcode=N" and then returns 0 whatever happened, so a failing
+    # install.sh or verify.sh would otherwise look like success. Read the
+    # status back out of the output rather than trusting the CLI's own.
+    run_in_cluster() {
+        local output
+        output="$(az aks command invoke "$@" 2>&1)"
+        printf '%s\n' "$output"
+        if printf '%s' "$output" | grep -qE 'exitcode=0($|[^0-9])'; then
+            return 0
+        fi
+        printf '\nThe in-cluster command reported a non-zero exit status.\n' >&2
+        return 1
+    }
+
+    run_in_cluster \
+        --resource-group "$RESOURCE_GROUP" \
+        --name "$AKS_NAME" \
+        --file verify.sh \
+        --command "$verify_command"
+
+# Empty the resource group while preserving the group and its scoped access.
+group-empty:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    temp_dir="$(mktemp -d)"
+    empty_bicep="$temp_dir/empty.bicep"
+    trap 'rm -f "$empty_bicep"; rmdir "$temp_dir"' EXIT
+    : > "$empty_bicep"
+
+    printf 'Emptying RESOURCE_GROUP %s in 10 seconds.\n' "$RESOURCE_GROUP"
+    sleep 10
+    az deployment group create \
+        --resource-group "$RESOURCE_GROUP" \
+        --template-file "$empty_bicep" \
+        --mode Complete

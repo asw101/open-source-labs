@@ -58,6 +58,13 @@
       "required": "what-if"
     },
     {
+      "path": "cloud-native/aks-wasm-directory",
+      "last_validated": "2026-08-28",
+      "validated_by": "cmbox",
+      "method": "arm-diff+deploy",
+      "required": "arm-diff+what-if"
+    },
+    {
       "path": "cloud-native/containerapps-bicep",
       "last_validated": "2026-08-17",
       "validated_by": "cmbox",
